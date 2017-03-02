@@ -5,3 +5,5 @@ Bonus: an example of managing immutable application state with unidirectional da
 
 See [Demo](http://projects.scalapro.net/monix-react-sortable/)
 
+
+See [My post](http://scalapro.net/scala-js-and-unidirectional-data-flow-2/)
