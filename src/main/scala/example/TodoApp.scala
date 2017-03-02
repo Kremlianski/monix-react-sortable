@@ -4,7 +4,6 @@ package example
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.prefix_<^._
 import org.scalajs.dom._
-import monix.execution.Scheduler.Implicits.global
 import monix.execution.Cancelable
 
 import scala.scalajs.js
@@ -13,8 +12,6 @@ import scala.scalajs.js._
 
 import net.scalapro.sortable._
 
-
-case class AppProps(d: Dispatcher[State])
 
 object TodoApp {
   private val TodoList = ReactComponentB[(List[String], Dispatcher[State])]("TodoList")
@@ -47,25 +44,26 @@ object TodoApp {
 
       <.div(^.id := "listWithHandle",
         ^.key := java.util.UUID.randomUUID.toString,
-        ^.ref ==> refFunc, ^.className := "list-group",
+        ^.ref ==> refFunc,
+        ^.className := "list-group",
         prop._1.zipWithIndex.map(createItem))
 
     }
     .build
 
 
-  class Backend($: BackendScope[AppProps, State]) {
+  class Backend($: BackendScope[Dispatcher[State], State]) {
     var end: Option[Cancelable] = None
 
     def onChange(e: ReactEventI) = {
-      val disp = $.props.runNow().d
+      val disp = $.props.runNow()
       val newValue = e.target.value
       Callback(disp.dispatch(s => s.copy(text = newValue).copy(typeOfChange = 1)))
     }
 
     def handleSubmit(e: ReactEventI) =
       e.preventDefaultCB >>
-        Callback($.props.runNow().d.dispatch((s: State) => s.copy(items = s.items :+ s.text)
+        Callback($.props.runNow().dispatch((s: State) => s.copy(items = s.items :+ s.text)
           .copy(text = "").copy(typeOfChange = 1)))
 
 
@@ -74,7 +72,7 @@ object TodoApp {
       val props = $.props.runNow()
       <.div(
         <.h3("TODO"),
-        TodoList((state.items, props.d)),
+        TodoList((state.items, props)),
         <.form(^.onSubmit ==> handleSubmit,
           <.input(^.onChange ==> onChange, ^.value := state.text),
           <.button("Add #", state.items.length + 1)
@@ -84,16 +82,16 @@ object TodoApp {
   }
 
 
-  val TodoApp = ReactComponentB[AppProps]("TodoApp")
-    .initialState_P((_.d.initialState))
+  val TodoApp = ReactComponentB[Dispatcher[State]]("TodoApp")
+    .initialState_P((_.initialState))
     .renderBackend[Backend]
     .componentDidMount(scope =>
 
       Callback {
-        val disp = scope.props.d
-        scope.backend.end = Option(disp.stream
-
-          .subscribe(disp.observer(x => scope.modState(_ => x).runNow())))
+        val disp = scope.props
+        scope.backend.end = disp.subscribeOpt(
+          x => scope.modState(_ => x).runNow()
+        )
       }
     )
 
@@ -103,6 +101,6 @@ object TodoApp {
 
     .build
 
-  def apply(props: AppProps) = TodoApp(props)
+  def apply(props: Dispatcher[State]) = TodoApp(props)
 
 }

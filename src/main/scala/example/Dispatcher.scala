@@ -4,6 +4,8 @@ import monix.execution.Ack
 import monix.execution.Ack.Continue
 import monix.reactive.{Observable, Observer}
 import monix.reactive.subjects.BehaviorSubject
+import monix.execution.Cancelable
+import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.Future
 
@@ -30,6 +32,19 @@ class Dispatcher [State](val initialState: State){
     def onComplete(): Unit =
       println("Completed")
   }
+
+  def subscribe(modeState:State=>Unit, filter:State=>Boolean): Cancelable =
+    stream.filter(filter).subscribe(observer(modeState))
+
+  def subscribe(modeState:State=>Unit): Cancelable =
+    stream.subscribe(observer(modeState))
+
+
+  def subscribeOpt(modeState:State=>Unit, filter:State=>Boolean): Option[Cancelable] =
+    Option(stream.filter(filter).subscribe(observer(modeState)))
+
+  def subscribeOpt(modeState:State=>Unit): Option[Cancelable] =
+    Option(stream.subscribe(observer(modeState)))
 }
 
 
